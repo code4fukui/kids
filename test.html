@@ -1,0 +1,286 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>子ども霞が関見学デー2016検索</title>
+<meta name="viewport" content="target-densitydpi=middle-dpi, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<link rel="apple-touch-icon" href="http://fukuno.jig.jp/app/kids/kids2016-2.png"/>
+<meta property="og:image" content="http://fukuno.jig.jp/app/kids/kids2016-2.png">
+<meta name="format-detection" content="telephone=no"/>
+<head>
+<script src=http://fukuno.jig.jp/fukuno.js></script>
+<script>"use strict";
+
+/*
+6: 学ぶ
+7: ふれる
+8: 体を動かす
+9: 乗る
+10: 見る
+11: 作る
+12: 収穫・採集する
+
+34: 小学生3年生以下
+35: 小学生4年生以上
+36: 中学生
+*/
+var CATEGORY = [
+	"学ぶ", "ふれる", "体を動かす", "乗る", "見る", "作る", "収穫・採集する"
+];
+var TARGET = [
+	"就学前", "小学生3年生以下", "小学生4年生以上", "中学生"
+];
+
+var getGoogleSpreadSheet = function(key, callback) {
+	// https://spreadsheets.google.com/feeds/worksheets/[key]/public/basic
+	var url = "https://spreadsheets.google.com/feeds/worksheets/" + key + "/public/basic?alt=json";
+	jsonp(url + "&callback=" + getCallbackMethod(function(data) {
+		var links = data.feed.entry[0].link;
+		for (var i = 0; i < links.length; i++) {
+			/*	// csvは失敗 
+			var getCSV = function(url, enc, callback) {
+				getRawJSON(url, enc, function(csv) {
+					callback(convertCSVtoArray(csv));
+				});
+			};
+			if (links[i].rel == "http://schemas.google.com/spreadsheets/2006#exportcsv") {
+				var url2 = links[i].href;
+				getCSV(url2, "utf-8", callback);
+				return;
+			}
+			*/
+			if (links[i].rel == "http://schemas.google.com/spreadsheets/2006#cellsfeed") {
+				var url2 = links[i].href;
+				
+				var parseSpreadsheet = function(data) {
+					var getPos = function(pos) {
+						var x = pos.charCodeAt(0) - "A".charCodeAt(0);
+						var n = 1;
+						var x2 = pos.charCodeAt(1) - "A".charCodeAt(0);
+						if (x2 >= 0 && x2 <= 26) {
+							x = (x + 1) * 26 + x2;
+							n++;
+						}
+						var y = parseInt(pos.substring(n)) - 1;
+						return [ x, y ];
+					};
+					var tbl = [];
+					var entry = data.feed.entry;
+					for (var i = 0; i < entry.length; i++) {
+						var e = entry[i];
+						var pos = e.title["$t"];
+						var xy = getPos(pos);
+						var x = xy[0];
+						var y = xy[1];
+						var val = e.content["$t"];
+						if (!tbl[y])
+							tbl[y] = [];
+						tbl[y][x] = val;
+					}
+					return tbl;
+				};
+				jsonp(url2 + "?alt=json&callback=" + getCallbackMethod(function(data) {
+					var tbl = parseSpreadsheet(data);
+//					dump(tbl);
+					callback(tbl);
+				}));
+				return;
+			}
+		}
+	}));
+};
+
+var getCivicFacilityFukui = function(callback) {
+	var q = f2s(function() {/*
+		select ?uri ?name ?lat ?lng {
+			?uri <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.org/jrrk#CivicFacility>;
+			<http://purl.org/jrrk#address> ?adr;
+			<http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat;
+			<http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lng;
+			<http://www.w3.org/2000/01/rdf-schema#label> ?name.
+		}
+	*/});
+//			filter(regex(str(?adr), "福井県")) 
+ 	var baseurl = "http://sparql.odp.jig.jp/data/sparql";
+	var url = baseurl + "?query=" + encodeURIComponent(q);
+	var func = function(data) {
+		var items = data.results.bindings;
+		
+		var list = [];
+		for (var i = 0; i < items.length; i++) {
+			var it = items[i];
+			var d = {
+//				type: it.type.value,
+//				name: it.name ? it.name.value : "",
+				uri: it.uri.value,
+				lat: it.lat.value,
+				lng: it.lng.value,
+				name: it.name.value
+			};
+			list.push(d);
+//			console.log(d.name + " " + d.lat);
+		}
+		callback(list);
+	};
+	url += "&output=json&callback=" + getCallbackMethod(func);
+	jsonp(url);
+};
+
+window.onload = function() {
+	getCivicFacilityFukui(function(fac) {
+		dump(fac);
+		var getLL = function(name) {
+			for (var i = 0; i < fac.length; i++) {
+				if (name.startsWith(fac[i].name)) {
+					return [ fac[i].lat, fac[i].lng ];
+				}
+			}
+			return [ 0, 0 ];
+		};
+
+		var key = "1tT1ckBejiQugSHeiZrzxmaPt7bpwHN-hrFkpA8RG9BI"; // 期日前投票
+		getGoogleSpreadSheet(key, function(data) {
+			dump(data);
+			var names = data[0];
+			for (var i = 1; i < data.length; i++) {
+				var d = data[i];
+//				var ll = getLL(d[0]);
+//				console.log(d[0] + "\t" + ll[0] + "\t" + ll[1]);
+			}
+		})
+
+	});
+	return;
+
+};
+var search = function(s) {
+	return "<a href=http://search.yahoo.co.jp/search?p=" + encodeURIComponent(s) + " target=_blank>" + s + "</a>";
+};
+var getContent = function(data) {
+	var div = create("div");
+	div.id = "cc";
+	var namelist = data[0];
+	for (var i = 1; i < data.length; i++) {
+		var dd = data[i];
+		if (!dd)
+			continue;
+		
+		var t = create("table");
+		for (var j = 0; j < namelist.length; j++) {
+			var d2 = dd[j];
+			
+			if (d2) {
+				var tr = create("tr");
+				var s1 = create("th");
+				s1.className = "name";
+				s1.textContent = namelist[j];
+				tr.appendChild(s1);
+	
+				var s2 = create("td");
+				s2.className = "val";
+				s2.textContent = d2;
+				tr.appendChild(s2);
+				t.appendChild(tr);
+			}
+		}
+		div.appendChild(t);
+		t.data = dd;
+	}
+	return div
+};
+
+</script>
+<style>
+body {
+	text-align: center;
+	margin: 30px 0px 0px 0px;
+	background: #00bfff;
+	color: white;
+}
+/* content */
+table {
+	color: black;
+	background-color: white;
+	margin: 1em;
+	border: 3px solid black;
+}
+table th {
+	font-size: 80%;
+	width: 10em;
+	text-align: right;
+	padding-right: .5em;
+	background-color: #ddd;
+	word-break: break-all;
+}
+table td {
+	padding-left: .2em;
+	word-break: break-all;
+}
+
+/* credit */
+.credit {
+	margin: 20px;
+	text-align: left;
+}
+.credit a {
+	color: gray !important;
+}
+#debug {
+	text-align: left;
+}
+textarea {
+	width: 90%;
+	height: 5em;
+}
+h1 a {
+	color: #00bfff !important;
+	text-decoration: none;
+}
+#sellist > span {
+	display: inline-block;
+	padding: 4px 8px;
+	margin: 2px;
+	border-radius: 4px;
+	font-size: 90%;
+	cursor: pointer;
+}
+.seltrue {
+	color: black;
+	background-color: white;
+}
+.selfalse {
+	color: #777;
+	background-color: #ddd;
+}
+#srchbox {
+	display: inline-block;
+	margin: 8px 10px;
+	padding: 8px;
+	font-size: 120%;
+	width: 90%;
+	text-align: left;
+}
+#srchboxc {
+	text-align: center;
+}
+a {
+	color: #eee !important;
+}
+</style>
+</head>
+<body>
+
+<h1>子ども霞が関見学デー2016検索</h1>
+<div id="srchboxc"><input type="text" id="srchbox" placeholder="検索キーワード"></div>
+<div id="sellist"></div>
+「<a href=http://www.mext.go.jp/a_menu/ikusei/kengaku/>子ども霞が関見学デー2016</a>」検索結果：<span id="cnt">-</span>件<br>
+<div id="content">オープンデータ、読込中...</div>
+<br>
+DATA: CC BY <a href=http://idea.linkdata.org/idea/idea1s1933i target=_blank>平成28年度子ども霞が関見学デー　プログラム</a>の<a href=https://docs.google.com/spreadsheets/d/1FuHYid4uUfgxMPZ5HjXPbZ15GZCON2Ke7oRSjFiPsDw/edit#gid=1349673159>コピー</a><br>
+APP: CC BY <a href=http://fukuno.jig.jp/1434 target=_blank>福野泰介の一日一創</a> (<a href=index-1.html>r1</a>)<br>
+(base APP: CC BY < (<a href=https://sabae-plancontest.jp/ target=_blank>鯖江市地域活性化プランコンテスト｜市長をやりませんか？</a>」検索アプリ)<br>
+</div>
+
+</body>
+</html>

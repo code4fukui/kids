@@ -175,15 +175,25 @@ var getContent = function(data) {
 			var d2 = dd[j];
 			
 			if (d2) {
+				var name = namelist[j];
 				var tr = create("tr");
 				var s1 = create("th");
 				s1.className = "name";
-				s1.textContent = namelist[j];
+				s1.textContent = name;
 				tr.appendChild(s1);
 	
 				var s2 = create("td");
 				s2.className = "val";
 				s2.textContent = d2;
+				if (name == null) {
+					s2.onclick = function() {
+						window.open("http://fukuno.jig.jp/app/kids/#" + this.textContent, "_blank");
+					};
+				} else if (d2.startsWith("http://") || d2.startsWith("https://")) {
+					s2.onclick = function() {
+						window.open(this.textContent, "_blank");
+					};
+				}
 				tr.appendChild(s2);
 				t.appendChild(tr);
 			}

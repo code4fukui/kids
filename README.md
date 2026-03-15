@@ -1,5 +1,7 @@
 # kids
 
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
+
 A search application for the "Children's Kasumigaseki Viewing Day" program.
 
 ## Features
